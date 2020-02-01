@@ -6,6 +6,8 @@ from scipy.sparse.linalg import LinearOperator
 from scipy.sparse.linalg import eigs
 from math import *
 import copy
+import itertools
+import bisect
 
 class numpyTensor:
     def _updateData(self):
@@ -546,9 +548,88 @@ class effectiveHamiltonian:
             print("Energy: " + str(self.e[0]))
         return np.array(es)
 
+class chargeShape:
+    def __init__(self,chargesDict):
+        self._chargeToRanges=chargesDict
         
-        
-        
-        
+    def __getitem__(self,charge):
+        return self._chargeToRanges[charge]
+    def __len__(self):
+        return len(self._chargeToRanges)
+    def size(self):
+        return np.sum( (len(r) for r in self._chargeToRanges.values() ) )
+    def charges(self):
+        return self._chargeToRanges.keys()
+    def chargeOfIndex(self,i):
+        for q in self.charges():
+            if i in self[q]:
+                return q
+        return None
+    
+class blockedTensor:
+    
+    def __init__(self,chargeShapes):
+        self._chargeShapes=chargeShapes
+        self._data=[]
+        self.charges=[c.charges() for c in self._chargeShapes]
+        self._sectors=list(itertools.product(*self.charges ))
+        for sector in self._sectors:
+            shape=[ len(self._chargeShapes[i][q])  for i,q in enumerate(sector) ]
+            self._data.append(numpyTensor(shape=shape))
+        #self._sortsectors()
+            
+    def rank(self):
+        return len(self._chargeShapes)
+    def shape(self):
+        return tuple([c.size() for c in self._chargeShapes])
+    
+    def _sortsectors(self):
+        self._sectors,self._data= ( list(t) for t in  zip(*sorted(zip( self._sectors, self._data))) )
+    def _indexBlock(self, block   ):
+        i=bisect.bisect_left(self._sectors,block)
+        if i!= len(self._sectors) and self._sectors[i] ==block:
+            return i
+        else:
+            return None
+    def isBlockZero(self,block):
+        if self._indexBlock(block) is not None:
+            return False
+        else:
+            return True
+    
+    def random(self):
+        for t in self._data:
+            t.random()
 
+    def block(self,index):
+        return self._data[self._indexBlock(index)]
+    
+    def blockIterator(self, index=None,qns=None):
+        '''
+        index : int 
+        qns : list, quantum numbers in index to keep
+        '''
+        charges=[c.charges() for c in self._chargeShapes]
+        if index is not None:
+            def f (x):
+                return x in qns
+        
+            charges[index]= filter(f ,charges[index] )
+        return itertools.product(*charges)
+    
+    def contract(self,t2,index1,index2):
+        _data=[]
+        
+        for block1 in self.blockIterator():
+            for  block2 in t2.blockIterator(index=index2,qns=self.charges[index1]):
+                pass
+                
+                
+                
+                
+        
+        
+        
+        
+        
         
