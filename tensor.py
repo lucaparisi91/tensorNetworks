@@ -600,7 +600,7 @@ class blockedTensor:
     def random(self):
         for t in self._data:
             t.random()
-
+            
     def block(self,index):
         return self._data[self._indexBlock(index)]
     

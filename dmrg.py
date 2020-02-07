@@ -1,0 +1,3 @@
+import ten
+
+class effectiveHamiltonian
